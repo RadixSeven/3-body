@@ -333,16 +333,23 @@ def run_simulation(
     Returns:
         SimulationResult: Object containing simulation results and initial conditions.
     """
-    y0 = random_initial_conditions()
-    t_eval = np.linspace(t_span[0], t_span[1], num_points)
-    sol = solve_ivp(
-        modified_three_body,
-        t_span,
-        y0,
-        args=(epsilon,),
-        dense_output=True,
-        t_eval=t_eval,
-    )
+    status = -1
+    while status != 0:
+        y0 = random_initial_conditions()
+        t_eval = np.linspace(t_span[0], t_span[1], num_points)
+        sol = solve_ivp(
+            modified_three_body,
+            t_span,
+            y0,
+            args=(epsilon,),
+            dense_output=True,
+            t_eval=t_eval,
+        )
+        if sol.status != 0:
+            logging.warning(
+                f"Simulation failed with status {sol.status}. Retrying with new initial conditions."
+            )
+        status = sol.status
 
     # Estimate Lyapunov exponent
     lyapunov_exponent = estimate_lyapunov_exponent(
