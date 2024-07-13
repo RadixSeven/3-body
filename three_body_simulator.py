@@ -58,9 +58,9 @@ def estimate_lyapunov_exponent(
     # Calculate Lyapunov exponent
     d0 = np.linalg.norm(y[:, 0] - y_perturbed[:, 0])
     d1 = np.linalg.norm(y[:, -1] - y_perturbed[:, -1])
-    lyap = np.log(d1 / d0) / (t_span[1] - t_span[0])
+    exponent = np.log(d1 / d0) / (t_span[1] - t_span[0])
 
-    return lyap
+    return exponent
 
 
 def box_counting_dim(
@@ -185,22 +185,22 @@ def run_simulation(
     ]
 
     # Estimate Lyapunov exponent
-    lyap = estimate_lyapunov_exponent(
+    lyapunov_exponent = estimate_lyapunov_exponent(
         modified_three_body, y0, t_span, num_points, epsilon, sol.y
     )
 
     # Calculate box-counting dimension
-    X = sol.y.T[
+    points_for_dim = sol.y.T[
         num_points // 2 :, [0, 1, 4, 5, 8, 9]
     ]  # Only position coordinates, discarding transients
-    dim, log_eps, log_N = box_counting_dim(X)
+    dim, log_eps, log_num_boxes = box_counting_dim(points_for_dim)
 
     return SimulationResult(
         initial_conditions=y0.tolist(),
         dimension=dim,
         log_eps=log_eps,
-        log_N=log_N,
-        lyapunov=lyap,
+        log_N=log_num_boxes,
+        lyapunov=lyapunov_exponent,
         energy=energies,
         angular_momentum=angular_momenta,
     )
@@ -227,9 +227,11 @@ def main(args: SimulationParams) -> None:
             measured_dimensions[str(epsilon)].append(asdict(result))
 
         avg_dim = np.mean([r["dimension"] for r in measured_dimensions[str(epsilon)]])
-        avg_lyap = np.mean([r["lyapunov"] for r in measured_dimensions[str(epsilon)]])
+        avg_exponent = np.mean(
+            [r["lyapunov"] for r in measured_dimensions[str(epsilon)]]
+        )
         print(
-            f"Epsilon = {epsilon}: Avg. Dimension = {avg_dim:.3f}, Avg. Lyapunov Exponent = {avg_lyap:.3f}"
+            f"Epsilon = {epsilon}: Avg. Dimension = {avg_dim:.3f}, Avg. Lyapunov Exponent = {avg_exponent:.3f}"
         )
 
     with open(json_file, "w") as f:
@@ -237,7 +239,6 @@ def main(args: SimulationParams) -> None:
 
 
 def get_args():
-    global args
     parser = argparse.ArgumentParser(description="Run Three-Body Problem simulations")
     parser.add_argument(
         "--epsilon",
@@ -268,5 +269,4 @@ def get_args():
 
 
 if __name__ == "__main__":
-    get_args()
     main(SimulationParams(**vars(get_args())))
