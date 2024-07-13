@@ -1,0 +1,6 @@
+scipy
+numpy
+scikit-learn
+matplotlib
+pre-commit
+black
