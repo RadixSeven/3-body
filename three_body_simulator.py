@@ -67,6 +67,9 @@ def box_counting_dim(
     """
     Estimate the box-counting dimension of a set of points.
 
+    This actually adds spheres around each point rather than
+    boxes.
+
     Args:
         points: Array of points around which boxes will be placed.
         n_samples: Number of epsilon values to sample. Defaults to 20.
@@ -82,11 +85,11 @@ def box_counting_dim(
     log_n = []
 
     for epsilon in epsilons:
-        if not check_connectedness(tree, epsilon):
-            break
+        if not is_connected(tree, epsilon):
+            continue
 
         num_points = len(tree.query_radius([[0] * points.shape[1]], r=epsilon)[0])
-        log_eps.append(np.log(1 / epsilon))
+        log_eps.append(np.log(epsilon))
         log_n.append(np.log(num_points))
 
     # Perform linear fit on the connected portion
@@ -97,32 +100,50 @@ def box_counting_dim(
 
 def estimate_epsilon_range(points: np.ndarray) -> tuple[float, float]:
     """
-    Estimate a suitable range for epsilon values based on the data.
+    Estimate a suitable range for epsilon values in box-counting dimension estimation based on the data.
+
+    The minimum value is the distance at which all points have at least one neighbor. One could use
+    this value/sqrt(2), since that would still result in connected boxes if the points lie along the
+    diagonal of a square box. However, we're not using square boxes. We need the radius to another point,
+    for which this is too small.
+
+    The maximum value is the maximum distance between any two points in the data. This will result in
+    all points being in one bin. This should be OK since we use exactly this epsilon value to calculate
+    the fit, so on the log-log plot, it will be a point at [log(max_distance), 0]. The graph flattens out
+    after this, which would mess up our fit, but including this point should still be OK.
 
     Args:
-        points: Array of points.
+        points: Array of points. Shape: (n_points, n_dimensions).
 
     Returns:
-        tuple[float, float]: Minimum and maximum epsilon values.
+        Minimum and maximum epsilon values.
     """
-    distances = KDTree(points).query(points, k=2)[0][
-        :, 1
-    ]  # Distances to nearest neighbors
-    min_distance = np.min(distances)
+    # Distances to the nearest two neighbors comparing the set of points to itself
+    pair_distances, _ = KDTree(points).query(points, k=2)
+    # distances to nearest neighbors
+    # The first nearest neighbor is the point itself, skip it
+    distances = pair_distances[:, 1]
+    # All points will have a neighbor at max_neighbor_distance
+    max_neighbor_distance = np.max(distances)
+    # No point will have neighbors at distances greater than max_distance
     max_distance = np.max(np.ptp(points, axis=0))  # Maximum extent of data
-    return min_distance / 2, max_distance
+    return max_neighbor_distance, max_distance
 
 
-def check_connectedness(tree: KDTree, epsilon: float) -> bool:
+def is_connected(tree: KDTree, distance: float) -> bool:
     """
-    Check if the epsilon-neighborhood graph is connected.
+    Return true if the ``distance``-neighborhood graph is connected.
+
+    Since we calculate the bins using this distance, this should be a good
+    measure of connectedness.
 
     Args:
-        tree (KDTree): KDTree of the points.
-        epsilon (float): Current epsilon value.
+        tree: KDTree of the points.
+        distance: The distance between two points that implies
+           an edge in the graph (i.e., that they are neighbors).
 
     Returns:
-        bool: True if connected, False otherwise.
+        True if connected, False otherwise.
     """
     n_points = tree.data.shape[0]
     visited = set()
@@ -131,7 +152,8 @@ def check_connectedness(tree: KDTree, epsilon: float) -> bool:
     while to_visit:
         current = to_visit.pop()
         visited.add(current)
-        neighbors = tree.query_radius([tree.data[current]], r=epsilon)[0]
+        current_data = tree.data[current]
+        neighbors = tree.query_radius([current_data], r=distance)[0]
         to_visit.update(set(neighbors) - visited)
 
     return len(visited) == n_points

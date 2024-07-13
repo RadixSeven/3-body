@@ -10,7 +10,7 @@ from three_body_common import SimulationParams
 from three_body_simulator import (
     modified_three_body,
     estimate_epsilon_range,
-    check_connectedness,
+    is_connected,
     box_counting_dim,
     random_initial_conditions,
     run_simulation,
@@ -61,7 +61,7 @@ def test_estimate_epsilon_range():
 def test_check_connectedness(epsilon, expected):
     points = np.array([[0, 0], [1, 1], [2, 2]])
     tree = KDTree(points)
-    assert check_connectedness(tree, epsilon) == expected
+    assert is_connected(tree, epsilon) == expected
 
 
 def test_box_counting_dim():
@@ -70,7 +70,7 @@ def test_box_counting_dim():
         1000, 2
     )  # 2D random points should have dimension close to 2
     dim, log_eps, log_num_points = box_counting_dim(points_2d)
-    assert 1.8 < dim < 2.2  # allowing some tolerance
+    assert dim == approx(2, abs=0.2)  # allowing some tolerance
     assert len(log_eps) == len(log_num_points)
 
 
