@@ -1,10 +1,13 @@
+from io import StringIO
+from unittest.mock import patch
+
 import pytest
 import numpy as np
 from pytest import approx
 from sklearn.neighbors import KDTree
 import json
 
-from three_body_common import SimulationParams
+from three_body_common import SimulationParams, SimulationResult
 
 # Import the functions to test
 from three_body_simulator import (
@@ -114,24 +117,101 @@ def test_all_offsets():
     )
 
 
-def test_main_function(tmp_path):
-    # Using pytest's tmp_path fixture for temporary directory
-    output_file = tmp_path / "output.json"
+class NonClosingStringIO(StringIO):
+    def close(self):
+        # Override close to do nothing
+        pass
 
+
+@patch("three_body_simulator.run_simulation")
+@patch("builtins.open")
+def test_main(mock_open, mock_run_simulation):
+    # Mock data for initial file read
+    mock_initial_data = {
+        "0": [
+            {
+                "initial_conditions": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1],
+                "dimension": 2,
+                "log_eps": [0, 1, 2],
+                "log_N": [0, 2, 4],
+                "lyapunov": 0.5,
+            }
+        ]
+    }
+    mock_initial_file = StringIO(json.dumps(mock_initial_data))
+    mock_initial_file.name = str("output.json")
+
+    # Mock data for run_simulation
+    mock_simulation_results = [
+        # Epsilon = 0
+        SimulationResult(
+            initial_conditions=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            dimension=2,
+            log_eps=[0, 1, 2],
+            log_N=[0, 2, 4],
+            lyapunov=0.5,
+        ),
+        # Epsilon = 0
+        SimulationResult(
+            initial_conditions=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 22],
+            dimension=2,
+            log_eps=[0, 1, 2],
+            log_N=[0, 2, 4],
+            lyapunov=0.5,
+        ),
+        # Epsilon = 1
+        SimulationResult(
+            initial_conditions=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            dimension=3,
+            log_eps=[0, 1, 2],
+            log_N=[0, 3, 6],
+            lyapunov=1.6,
+        ),
+        # Epsilon = 1
+        SimulationResult(
+            initial_conditions=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 24],
+            dimension=3,
+            log_eps=[0, 1, 2],
+            log_N=[0, 3, 6],
+            lyapunov=1.6,
+        ),
+    ]
+
+    # Mock for file writing
+    mock_output = NonClosingStringIO()
+
+    # Set up the mock_open to return different file objects for read and write
+    mock_open.side_effect = [mock_initial_file, mock_output]
+
+    # Set up mock_run_simulation to return predefined results
+    mock_run_simulation.side_effect = mock_simulation_results
+
+    # Create SimulationParams
     p = SimulationParams(
-        epsilon=[0, 0.5], trials=2, time=10, points=1000, output=str(output_file)
+        epsilon=[0, 1], trials=2, time=10, points=1000, output="output.json"
     )
+
+    # Run the main function
     main(p)
 
-    # Check if the file was created and contains valid JSON
-    assert output_file.exists()
-    with open(output_file, "r") as f:
-        data = json.load(f)
+    # Check if run_simulation was called the correct number of times
+    assert mock_run_simulation.call_count == 4
 
-    assert "0" in data
-    assert "0.5" in data
-    assert len(data["0"]) == 2
-    assert len(data["0.5"]) == 2
+    # Check the content written to the output file
+    mock_output.seek(0)
+    written_data = json.loads(mock_output.getvalue())
+    written_data = {
+        k: [SimulationResult(**d) for d in dicts] for k, dicts in written_data.items()
+    }
+
+    assert "0" in written_data
+    assert "1" in written_data
+    assert len(written_data["0"]) == 3  # 1 initial + 2 new
+    assert len(written_data["1"]) == 2  # 0 initial + 2 new
+
+    # Check if the new simulation results were added correctly
+    assert written_data["0"][1:] == mock_simulation_results[:2]
+    assert written_data["1"] == mock_simulation_results[2:]
 
 
 # Optional: Add a fixture for common test data
