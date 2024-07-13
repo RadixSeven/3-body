@@ -42,6 +42,7 @@ def modified_three_body(
     Returns:
         np.ndarray: Derivatives [vx1, vy1, ax1, ay1, vx2, vy2, ax2, ay2, vx3, vy3, ax3, ay3].
     """
+    # x1, y1 are the coordinates of the first body, and vx1, vy1 are the corresponding velocities
     x1, y1, vx1, vy1, x2, y2, vx2, vy2, x3, y3, vx3, vy3 = state
 
     r12 = np.sqrt((x1 - x2) ** 2 + (epsilon * (y1 - y2)) ** 2)
