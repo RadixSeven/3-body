@@ -81,16 +81,19 @@ def box_counting_dim(
         raise ValueError("Need at least two points to calculate dimension.")
     tree = KDTree(points)
     eps_min, eps_max = estimate_epsilon_range(points)
+    eps_min = eps_min / np.sqrt(
+        2
+    )  # We're using squares, not circles, so we can start with smaller radii.
     epsilons = np.logspace(np.log10(eps_min), np.log10(eps_max), n_samples)
 
     log_eps = []
     log_n = []
 
     for epsilon in epsilons:
-        if not is_connected(tree, epsilon):
+        squares = covering_squares(points, epsilon)
+        if not are_8_connected(squares):
             continue
-
-        num_squares = count_covering_squares(points, epsilon)
+        num_squares = len(squares)
         log_eps.append(-np.log(epsilon))
         log_n.append(np.log(num_squares))
 
@@ -132,6 +135,42 @@ def estimate_epsilon_range(points: np.ndarray) -> tuple[float, float]:
     return max_neighbor_distance, max_distance
 
 
+def are_8_connected(squares: set[tuple]) -> bool:
+    """
+    Check if the squares are 8-connected.
+
+    Args:
+        squares: Set of grid-squares, each represented as a tuple of indices.
+
+    Returns:
+        True if connected, False otherwise.
+    """
+    # Create a set of tuples for fast lookup
+    if any(len(square) != 2 for square in squares):
+        raise ValueError("Squares must be 2D.")
+    if len(squares) < 2:
+        return True
+    coords = np.array(list(squares))
+
+    # Define the 8-connected neighborhood offsets
+    offsets = np.array(
+        [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
+    )
+
+    # Check each coordinate
+    for coord in coords:
+        # Generate all 8-connected neighbors
+        neighbors = coord + offsets
+
+        # Check if any neighbor is in the original set
+        if any(tuple(neighbor) in squares for neighbor in neighbors):
+            continue
+        else:
+            return False
+
+    return True
+
+
 def is_connected(tree: KDTree, distance: float) -> bool:
     """
     Return true if the ``distance``-neighborhood graph is connected.
@@ -161,14 +200,14 @@ def is_connected(tree: KDTree, distance: float) -> bool:
     return len(visited) == n_points
 
 
-def count_covering_squares(points: np.ndarray, side_length: float):
+def covering_squares(points: np.ndarray, side_length: float) -> set[tuple]:
     # Calculate the indices of the squares for each point
     indices = np.floor(points / side_length).astype(int)
 
     # Use a set to count unique squares
-    unique_squares = set(map(tuple, indices))
+    unique_squares: set[tuple] = set(map(tuple, indices))
 
-    return len(unique_squares)
+    return unique_squares
 
 
 def random_initial_conditions() -> np.ndarray:

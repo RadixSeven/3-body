@@ -65,10 +65,7 @@ def test_check_connectedness(epsilon, expected):
 
 
 def test_box_counting_dim():
-    np.random.seed(42)  # for reproducibility
-    points_2d = np.random.rand(
-        1000, 2
-    )  # 2D random points should have dimension close to 2
+    points_2d = np.array([[i, j] for i in range(50) for j in range(50)])
     dim, log_eps, log_num_points = box_counting_dim(points_2d)
     assert dim == approx(2, abs=0.2)  # allowing some tolerance
     assert len(log_eps) == len(log_num_points)
