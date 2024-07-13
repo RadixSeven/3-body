@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from scipy.integrate import solve_ivp
 from sklearn.neighbors import KDTree
@@ -5,7 +7,7 @@ import json
 from pathlib import Path
 import argparse
 from collections import defaultdict
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 
 from three_body_common import (
     SimulationResult,
@@ -61,6 +63,12 @@ def estimate_lyapunov_exponent(
     return exponent
 
 
+@dataclass
+class BoxCountPair:
+    log_eps: float
+    log_num_points: float
+
+
 def box_counting_dim(
     points: np.ndarray, n_samples: int = 20
 ) -> tuple[float, list[float], list[float]]:
@@ -77,29 +85,48 @@ def box_counting_dim(
     Returns:
         Estimated dimension, log(1/epsilon) values, log(num_points) values.
     """
-    if points.shape[0] < 2:
-        raise ValueError("Need at least two points to calculate dimension.")
-    tree = KDTree(points)
+    shape = points.shape
+    if shape[0] < 2**2 + 1:
+        raise ValueError(
+            "Need at least 5 points to calculate dimension in a 2-D space."
+        )
     eps_min, eps_max = estimate_epsilon_range(points)
     eps_min = eps_min / np.sqrt(
         2
     )  # We're using squares, not circles, so we can start with smaller radii.
-    epsilons = np.logspace(np.log10(eps_min), np.log10(eps_max), n_samples)
+    epsilons = np.logspace(np.log(eps_min), np.log(eps_max), n_samples, base=np.exp(1))
 
-    log_eps = []
-    log_n = []
+    pairs = []
 
     for epsilon in epsilons:
         squares = covering_squares(points, epsilon)
         if not are_8_connected(squares):
             continue
         num_squares = len(squares)
-        log_eps.append(-np.log(epsilon))
-        log_n.append(np.log(num_squares))
+
+        lns = np.log(num_squares)
+        if len(pairs) > 0 and lns == pairs[-1].log_num_points:
+            # Only record the maximum epsilon that generated
+            # a given number of squares unless there are only 4
+            # squares, where things start to break down.
+            cur_l_eps = pairs[-1].log_eps
+            new_l_eps = -np.log(epsilon)
+            pairs[-1].log_eps = max(cur_l_eps, new_l_eps)
+        else:
+            pairs.append(BoxCountPair(-np.log(epsilon), lns))
+
+    pairs = sorted(pairs, key=lambda x: x.log_eps)
+    if len(pairs) >= 4:
+        pairs = pairs[1:-1]  # Remove the first and last points, which are noisy
+    log_eps = [pair.log_eps for pair in pairs]
+    log_n = [pair.log_num_points for pair in pairs]
 
     # Perform linear fit on the connected portion
-    slope, _ = np.polyfit(log_eps, log_n, 1)
+    if len(log_eps) < 2:
+        logging.warning("Not enough box-counting points for dimension estimation.")
+        return np.nan, log_eps, log_n
 
+    slope, _ = np.polyfit(log_eps, log_n, 1)
     return slope, log_eps, log_n
 
 
@@ -135,9 +162,43 @@ def estimate_epsilon_range(points: np.ndarray) -> tuple[float, float]:
     return max_neighbor_distance, max_distance
 
 
+def _all_offsets_with_0(num_dimensions: int) -> list[list[int]]:
+    """
+    Same as all_offsets, but includes the [0, 0, ..., 0] offset.
+    """
+    offsets = [[]]
+    for i in range(num_dimensions):
+        minus1 = [[*offset, -1] for offset in offsets]
+        zero = [[*offset, 0] for offset in offsets]
+        plus1 = [[*offset, 1] for offset in offsets]
+        offsets = minus1 + zero + plus1
+    return offsets
+
+
+def all_offsets(num_dimensions: int) -> list[list[int]]:
+    """
+    Generate all possible offsets for a given number of dimensions.
+
+    Args:
+        num_dimensions: Number of dimensions. Must be 1 or more.
+
+    Returns:
+        List of all possible offsets.
+    """
+    if num_dimensions == 0:
+        raise ValueError(
+            "Number of dimensions must be 1 or more when calculating offsets."
+        )
+    return [offset for offset in _all_offsets_with_0(num_dimensions) if any(offset)]
+
+
 def are_8_connected(squares: set[tuple]) -> bool:
     """
-    Check if the squares are 8-connected.
+    Check if the hypercubes identified by the tuples in ``squares`` are connected in a way
+    that would be 8-connected in a 2D grid, that is, in a hypercube whose coordinates are one
+    away from the connected hypercube.
+
+    Note that the algorithm used here is exponential in the number of dimensions, scaling as O(3^d*len(squares)).
 
     Args:
         squares: Set of grid-squares, each represented as a tuple of indices.
@@ -146,16 +207,16 @@ def are_8_connected(squares: set[tuple]) -> bool:
         True if connected, False otherwise.
     """
     # Create a set of tuples for fast lookup
-    if any(len(square) != 2 for square in squares):
-        raise ValueError("Squares must be 2D.")
+    all_dimensions = {len(coord) for coord in squares}
+    if len(all_dimensions) != 1:
+        raise ValueError("All coordinates must have the same number of dimensions.")
+    dimensions = all_dimensions.pop()
     if len(squares) < 2:
         return True
     coords = np.array(list(squares))
 
     # Define the 8-connected neighborhood offsets
-    offsets = np.array(
-        [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
-    )
+    offsets = np.array(all_offsets(dimensions))
 
     # Check each coordinate
     for coord in coords:

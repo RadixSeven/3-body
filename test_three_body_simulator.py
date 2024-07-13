@@ -15,6 +15,7 @@ from three_body_simulator import (
     random_initial_conditions,
     run_simulation,
     main,
+    all_offsets,
 )
 
 
@@ -64,14 +65,31 @@ def test_check_connectedness(epsilon, expected):
     assert is_connected(tree, epsilon) == expected
 
 
-def test_box_counting_dim():
-    points_2d = np.array([[i, j] for i in range(50) for j in range(50)])
+def test_box_counting_dim_400_grid():
+    points_2d = np.array([[i, j] for i in range(20) for j in range(20)])
+    dim, log_eps, log_num_points = box_counting_dim(points_2d)
+    assert dim == approx(2, abs=0.1)  # allowing some tolerance
+    assert len(log_eps) == len(log_num_points)
+
+
+def test_box_counting_dim_900_grid():
+    n = 30
+    points_2d = np.array([[i, j] for i in range(n) for j in range(n)])
+    dim, log_eps, log_num_points = box_counting_dim(points_2d)
+    assert dim == approx(2, abs=0.1)  # allowing some tolerance
+    assert len(log_eps) == len(log_num_points)
+
+
+def test_box_counting_dim_random_500():
+    np.random.seed(42)
+    points_2d = np.random.rand(500, 2)
     dim, log_eps, log_num_points = box_counting_dim(points_2d)
     assert dim == approx(2, abs=0.2)  # allowing some tolerance
     assert len(log_eps) == len(log_num_points)
 
 
 def test_random_initial_conditions():
+    np.random.seed(42)
     init_cond = random_initial_conditions()
     assert len(init_cond) == 12
     reshaped = init_cond.reshape(3, 4)
@@ -85,6 +103,15 @@ def test_run_simulation():
     assert result.lyapunov > 0  # epsilon=1 should be chaotic
     result = run_simulation(epsilon=0, t_span=(0, 10), num_points=1000)
     assert result.dimension > 0
+
+
+def test_all_offsets():
+    with pytest.raises(ValueError):
+        all_offsets(0)
+    assert sorted(map(tuple, all_offsets(1))) == sorted({(1,), (-1,)})
+    assert sorted(map(tuple, all_offsets(2))) == sorted(
+        {(0, 1), (0, -1), (1, 1), (1, 0), (1, -1), (-1, 1), (-1, 0), (-1, -1)}
+    )
 
 
 def test_main_function(tmp_path):
