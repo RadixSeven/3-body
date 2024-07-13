@@ -22,6 +22,7 @@ def estimate_lyapunov_exponent(
     t_span: tuple[float, float],
     num_points: int,
     epsilon: float,
+    initial_solution: np.ndarray,
     delta: float = 1e-9,
 ) -> float:
     """
@@ -33,21 +34,14 @@ def estimate_lyapunov_exponent(
         t_span (tuple[float, float]): Time span for the simulation.
         num_points (int): Number of points to evaluate.
         epsilon (float): Coupling strength for the y-dimension.
+        initial_solution (np.ndarray): The solution for the initial condition.
         delta (float): Small perturbation for initial condition. Defaults to 1e-9.
 
     Returns:
         float: Estimated largest Lyapunov exponent.
     """
-    # Initial condition
-    sol = solve_ivp(
-        func,
-        t_span,
-        y0,
-        args=(epsilon,),
-        dense_output=True,
-        t_eval=np.linspace(t_span[0], t_span[1], num_points),
-    )
-    y = sol.y
+    # Use the provided initial solution
+    y = initial_solution
 
     # Perturbed initial condition
     y0_perturbed = y0 + delta * np.random.randn(len(y0))
@@ -174,13 +168,14 @@ def run_simulation(
         SimulationResult: Object containing simulation results and initial conditions.
     """
     y0 = random_initial_conditions()
+    t_eval = np.linspace(t_span[0], t_span[1], num_points)
     sol = solve_ivp(
         modified_three_body,
         t_span,
         y0,
         args=(epsilon,),
         dense_output=True,
-        t_eval=np.linspace(t_span[0], t_span[1], num_points),
+        t_eval=t_eval,
     )
 
     # Calculate conserved quantities
@@ -191,7 +186,7 @@ def run_simulation(
 
     # Estimate Lyapunov exponent
     lyap = estimate_lyapunov_exponent(
-        modified_three_body, y0, t_span, num_points, epsilon
+        modified_three_body, y0, t_span, num_points, epsilon, sol.y
     )
 
     # Calculate box-counting dimension
