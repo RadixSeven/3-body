@@ -390,10 +390,13 @@ def main(args: SimulationParams) -> None:
     except FileNotFoundError:
         measured_dimensions = defaultdict(list)
 
-    for epsilon in tqdm(args.epsilon, "Epsilon"):
-        for _ in tqdm(range(args.trials), "Trials"):
-            result = run_simulation(epsilon, (0, args.time), args.points)
-            measured_dimensions[str(epsilon)].append(asdict(result))
+    with tqdm(total=len(args.epsilon) * args.trials, desc="Trials") as pbar:
+        for epsilon in args.epsilon:
+            pbar.set_postfix(epsilon=epsilon)
+            for _ in range(args.trials):
+                result = run_simulation(epsilon, (0, args.time), args.points)
+                measured_dimensions[str(epsilon)].append(asdict(result))
+                pbar.update(1)
 
     with open(json_file, "w") as f:
         json.dump(dict(measured_dimensions), f)
