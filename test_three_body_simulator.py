@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from pytest import approx
 from sklearn.neighbors import KDTree
 import json
 
@@ -18,31 +19,35 @@ from three_body_simulator import (
 
 
 def test_modified_three_body():
+    # Three stationary points: one at 1,1, one at -1,-1 and one at 0,0.
     state = np.array([1, 1, 0, 0, -1, -1, 0, 0, 0, 0, 0, 0])
-    epsilon = 0.5
-    result = modified_three_body(0, state, epsilon)
+    y_grav = 0.5
+    result = modified_three_body(0, state, y_grav)
+    # Actual values
+    vx1, vy1, ax1, ay1, vx2, vy2, ax2, ay2, vx3, vy3, ax3, ay3 = result
 
     assert len(result) == 12
-    assert isinstance(result, list)
 
     # Check if the accelerations are correct
-    grav = 1  # gravitational constant
-    expected_r = np.sqrt(2**2 + (0.5 * 2) ** 2)  # distance between bodies 1 and 2
-    expected_ax1 = grav * (-2) / expected_r**3  # acceleration of body 1 in x direction
-    expected_ay1 = (
-        epsilon * grav * (-2) / expected_r**3
-    )  # acceleration of body 1 in y direction
+    expected_r12 = np.sqrt(2**2 + (2**2))  # distance between bodies 1 and 2
+    expected_fx12 = -2 / (expected_r12**3)  # force on body 1 from body 2 in x dir
+    expected_fy12 = -2 * y_grav / (expected_r12**3)  # force on body 1 from 2 in y dir
+    expected_r13 = np.sqrt(1**2 + 1**2)  # distance between bodies 1 and 3
+    expected_fx13 = -1 / (expected_r13**3)  # force on body 1 from body 3 in x dir
+    expected_fy13 = -1 * y_grav / (expected_r13**3)
+    expected_ax1 = expected_fx12 + expected_fx13
+    expected_ay1 = expected_fy12 + expected_fy13
 
-    assert np.isclose(result[2], expected_ax1, rtol=1e-7)
-    assert np.isclose(result[3], expected_ay1, rtol=1e-7)
+    assert ax1 == approx(expected_ax1, rel=1e-7)
+    assert ay1 == approx(expected_ay1, rel=1e-7)
 
     # Check symmetry
-    assert np.isclose(result[2], -result[6], rtol=1e-7)  # ax1 should be opposite to ax2
-    assert np.isclose(result[3], -result[7], rtol=1e-7)  # ay1 should be opposite to ay2
+    assert ax1 == approx(-ax2, rel=1e-7)  # ax1 should be opposite to ax2
+    assert ay1 == approx(-ay2, rel=1e-7)  # ay1 should be opposite to ay2
 
     # Check that body 3 (at origin) experiences balanced forces
-    assert np.isclose(result[10], 0, atol=1e-7)  # ax3 should be close to 0
-    assert np.isclose(result[11], 0, atol=1e-7)  # ay3 should be close to 0
+    assert ax3 == approx(0, abs=1e-7)  # ax3 should be close to 0
+    assert ay3 == approx(0, abs=1e-7)  # ay3 should be close to 0
 
 
 def test_estimate_epsilon_range():
