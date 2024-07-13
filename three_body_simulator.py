@@ -100,7 +100,7 @@ def box_counting_dim(
 
     for epsilon in epsilons:
         squares = covering_squares(points, epsilon)
-        if not are_8_connected(squares):
+        if not are_8_connected_kd(squares):
             continue
         num_squares = len(squares)
 
