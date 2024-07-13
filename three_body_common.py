@@ -5,9 +5,14 @@ from typing import List
 
 @dataclass
 class SimulationResult:
-    """Dataclass to store the results of a single simulation run."""
+    """Dataclass to store the results of a single simulation run
+    and the parameters that were used to generate it."""
 
     initial_conditions: List[float]
+    epsilon: float
+    time_start: float
+    time_stop: float
+    num_points: int
     dimension: float
     log_eps: List[float]
     log_N: List[float]

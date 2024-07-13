@@ -326,12 +326,12 @@ def run_simulation(
     Run a single simulation of the modified three-body problem and calculate various metrics.
 
     Args:
-        epsilon (float): Coupling strength for the y-dimension.
-        t_span (tuple[float, float]): Time span for the simulation.
-        num_points (int): Number of points to evaluate in the simulation.
+        epsilon: Coupling strength for the y-dimension.
+        t_span: Time span for the simulation.
+        num_points: Number of points to evaluate in the simulation.
 
     Returns:
-        SimulationResult: Object containing simulation results and initial conditions.
+        Object containing simulation results and initial conditions.
     """
     status = -1
     while status != 0:
@@ -364,6 +364,10 @@ def run_simulation(
 
     return SimulationResult(
         initial_conditions=y0.tolist(),
+        epsilon=epsilon,
+        time_start=t_span[0],
+        time_stop=t_span[1],
+        num_points=num_points,
         dimension=dim,
         log_eps=log_eps,
         log_N=log_num_boxes,

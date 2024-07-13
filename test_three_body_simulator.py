@@ -183,6 +183,10 @@ def test_main(mock_open, mock_run_simulation):
         "0": [
             {
                 "initial_conditions": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1],
+                "epsilon": 1,
+                "time_start": 0,
+                "time_stop": 10,
+                "num_points": 1000,
                 "dimension": 2,
                 "log_eps": [0, 1, 2],
                 "log_N": [0, 2, 4],
@@ -192,12 +196,19 @@ def test_main(mock_open, mock_run_simulation):
     }
     mock_initial_file = StringIO(json.dumps(mock_initial_data))
     mock_initial_file.name = str("output.json")
+    mock_simulation_params = SimulationParams(
+        epsilon=[0, 1], trials=2, time=10, points=1000, output="output.json"
+    )
 
     # Mock data for run_simulation
     mock_simulation_results = [
         # Epsilon = 0
         SimulationResult(
             initial_conditions=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            epsilon=0,
+            time_start=0,
+            time_stop=10,
+            num_points=1000,
             dimension=2,
             log_eps=[0, 1, 2],
             log_N=[0, 2, 4],
@@ -206,6 +217,10 @@ def test_main(mock_open, mock_run_simulation):
         # Epsilon = 0
         SimulationResult(
             initial_conditions=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 22],
+            epsilon=0,
+            time_start=0,
+            time_stop=10,
+            num_points=1000,
             dimension=2,
             log_eps=[0, 1, 2],
             log_N=[0, 2, 4],
@@ -214,6 +229,10 @@ def test_main(mock_open, mock_run_simulation):
         # Epsilon = 1
         SimulationResult(
             initial_conditions=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            epsilon=0,
+            time_start=0,
+            time_stop=10,
+            num_points=1000,
             dimension=3,
             log_eps=[0, 1, 2],
             log_N=[0, 3, 6],
@@ -222,6 +241,10 @@ def test_main(mock_open, mock_run_simulation):
         # Epsilon = 1
         SimulationResult(
             initial_conditions=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 24],
+            epsilon=0,
+            time_start=0,
+            time_stop=10,
+            num_points=1000,
             dimension=3,
             log_eps=[0, 1, 2],
             log_N=[0, 3, 6],
@@ -238,13 +261,8 @@ def test_main(mock_open, mock_run_simulation):
     # Set up mock_run_simulation to return predefined results
     mock_run_simulation.side_effect = mock_simulation_results
 
-    # Create SimulationParams
-    p = SimulationParams(
-        epsilon=[0, 1], trials=2, time=10, points=1000, output="output.json"
-    )
-
     # Run the main function
-    main(p)
+    main(mock_simulation_params)
 
     # Check if run_simulation was called the correct number of times
     assert mock_run_simulation.call_count == 4

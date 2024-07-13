@@ -206,10 +206,19 @@ def plot_dimensions_and_metrics(params: PlotterParams) -> None:
             max_lyap_result = max(results, key=lambda r: r.lyapunov)
             plot_trajectory(
                 max_lyap_result.initial_conditions,
-                float(epsilon),
-                (0, 1000),
-                10000,
-                params.output,
+                max_lyap_result.epsilon,
+                (max_lyap_result.time_start, max_lyap_result.time_stop),
+                max_lyap_result.num_points,
+                params.output + "_max_exponent",
+                params.output_format,
+            )
+            max_dim_result = max(results, key=lambda r: r.dimension)
+            plot_trajectory(
+                max_dim_result.initial_conditions,
+                max_dim_result.epsilon,
+                (max_dim_result.time_start, max_dim_result.time_stop),
+                max_dim_result.num_points,
+                params.output + "_max_dimension",
                 params.output_format,
             )
 
