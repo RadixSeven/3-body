@@ -2,8 +2,12 @@
 
 Investigate the dynamics of the 3-body problem
 
-For now, I'll start with having all the Python code in the root of the repository.
-If it becomes something to share more widely, I'll reorganize it into a package.
+For now, I'll start with having all the Python code in the root of the
+repository. If it becomes something to share more widely, I'll reorganize it
+into a package.
+
+Since the complexity that interests me develops even if the masses are the same,
+I'll ignore the possibility of different masses.
 
 ## Installation
 
@@ -17,8 +21,8 @@ Requirements include pytest, so you can run the tests with
 pytest
 ```
 
-If you're going to do any development, you should install pre-commit
-so the code is formatted before you commit.
+If you're going to do any development, you should install pre-commit so the code
+is formatted before you commit.
 
 ```bash
 pre-commit install
