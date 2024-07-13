@@ -4,3 +4,4 @@ scikit-learn
 matplotlib
 pre-commit
 black
+pytest
