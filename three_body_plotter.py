@@ -16,6 +16,7 @@ class PlotterParams:
     input: str
     output: str
     plot_trajectories: bool
+    output_format: str
 
 
 def load_data(json_file: str) -> Dict[str, List[SimulationResult]]:
@@ -49,16 +50,18 @@ def plot_trajectory(
     t_span: Tuple[float, float],
     num_points: int,
     output_prefix: str,
+    output_format: str,
 ) -> None:
     """
     Plot the trajectory of the three bodies for a given set of initial conditions.
 
     Args:
-        initial_conditions (List[float]): Initial conditions for the simulation.
-        epsilon (float): Coupling strength for the y-dimension.
-        t_span (Tuple[float, float]): Time span for the simulation.
-        num_points (int): Number of points to evaluate in the simulation.
-        output_prefix (str): Prefix for the output file name.
+        initial_conditions: Initial conditions for the simulation.
+        epsilon: Coupling strength for the y-dimension.
+        t_span: Time span for the simulation.
+        num_points: Number of points to evaluate in the simulation.
+        output_prefix: Prefix for the output file name.
+        output_format: The output file format ("svg" or "png").
     """
     sol = solve_ivp(
         modified_three_body,
@@ -79,8 +82,8 @@ def plot_trajectory(
     ax.legend()
     ax.grid(True)
     plt.savefig(
-        f"{output_prefix}_trajectory_epsilon_{epsilon}.svg",
-        format="svg",
+        f"{output_prefix}_trajectory_epsilon_{epsilon}.{output_format}",
+        format=output_format,
         dpi=300,
         bbox_inches="tight",
     )
@@ -88,14 +91,15 @@ def plot_trajectory(
 
 
 def plot_dimensions_and_lyapunov(
-    data: Dict[str, List[SimulationResult]], output_prefix: str
+    data: Dict[str, List[SimulationResult]], output_prefix: str, output_format: str
 ) -> None:
     """
     Plot boxplots of attractor dimensions and Lyapunov exponents.
 
     Args:
-        data (Dict[str, List[SimulationResult]]): Dictionary of simulation results.
-        output_prefix (str): Prefix for the output file name.
+        data: Dictionary of simulation results.
+        output_prefix: Prefix for the output file name.
+        output_format: The output file format ("svg" or "png").
     """
     epsilon_values = sorted(float(eps) for eps in data.keys())
     dimensions = [[r.dimension for r in data[str(eps)]] for eps in epsilon_values]
@@ -117,8 +121,8 @@ def plot_dimensions_and_lyapunov(
 
     plt.tight_layout()
     plt.savefig(
-        f"{output_prefix}_dimensions_lyapunov.svg",
-        format="svg",
+        f"{output_prefix}_dimensions_lyapunov.{output_format}",
+        format=output_format,
         dpi=300,
         bbox_inches="tight",
     )
@@ -126,14 +130,15 @@ def plot_dimensions_and_lyapunov(
 
 
 def plot_dimension_lyapunov_vs_epsilon(
-    data: Dict[str, List[SimulationResult]], output_prefix: str
+    data: Dict[str, List[SimulationResult]], output_prefix: str, output_format: str
 ) -> None:
     """
     Plot mean dimension and Lyapunov exponent vs epsilon with error bars.
 
     Args:
-        data (Dict[str, List[SimulationResult]]): Dictionary of simulation results.
-        output_prefix (str): Prefix for the output file name.
+        data: Dictionary of simulation results.
+        output_prefix: Prefix for the output file name.
+        output_format: The output file format ("svg" or "png").
     """
     epsilon_values = sorted(float(eps) for eps in data.keys())
     dimensions = [[r.dimension for r in data[str(eps)]] for eps in epsilon_values]
@@ -176,8 +181,8 @@ def plot_dimension_lyapunov_vs_epsilon(
     plt.title("Dimension and Lyapunov Exponent vs. Epsilon")
     plt.grid(True)
     plt.savefig(
-        f"{output_prefix}_dimension_lyapunov_vs_epsilon.svg",
-        format="svg",
+        f"{output_prefix}_dimension_lyapunov_vs_epsilon.{output_format}",
+        format=output_format,
         dpi=300,
         bbox_inches="tight",
     )
@@ -192,8 +197,8 @@ def plot_dimensions_and_metrics(params: PlotterParams) -> None:
         params (PlotterParams): Plotter parameters including input and output file names.
     """
     data = load_data(params.input)
-    plot_dimensions_and_lyapunov(data, params.output)
-    plot_dimension_lyapunov_vs_epsilon(data, params.output)
+    plot_dimensions_and_lyapunov(data, params.output, params.output_format)
+    plot_dimension_lyapunov_vs_epsilon(data, params.output, params.output_format)
 
     if params.plot_trajectories:
         # Plot trajectory for the simulation with the highest Lyapunov exponent for each epsilon
@@ -205,6 +210,7 @@ def plot_dimensions_and_metrics(params: PlotterParams) -> None:
                 (0, 1000),
                 10000,
                 params.output,
+                params.output_format,
             )
 
 
@@ -216,7 +222,10 @@ def main(args: argparse.Namespace) -> None:
         args (argparse.Namespace): Command-line arguments.
     """
     params = PlotterParams(
-        input=args.input, output=args.output, plot_trajectories=args.plot_trajectories
+        input=args.input,
+        output=args.output,
+        plot_trajectories=args.plot_trajectories,
+        output_format=args.output_format,
     )
     plot_dimensions_and_metrics(params)
 
@@ -238,6 +247,13 @@ def get_args() -> argparse.Namespace:
         "--plot-trajectories",
         action="store_true",
         help="Plot trajectories for interesting cases",
+    )
+    parser.add_argument(
+        "--output-format",
+        type=str,
+        choices=["svg", "png"],
+        default="png",
+        help="Output file format",
     )
     return parser.parse_args()
 
