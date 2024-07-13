@@ -11,8 +11,6 @@ from three_body_common import (
     SimulationResult,
     SimulationParams,
     modified_three_body,
-    calculate_energy,
-    calculate_angular_momentum,
 )
 
 
@@ -178,12 +176,6 @@ def run_simulation(
         t_eval=t_eval,
     )
 
-    # Calculate conserved quantities
-    energies = [calculate_energy(sol.y[:, i], epsilon) for i in range(sol.y.shape[1])]
-    angular_momenta = [
-        calculate_angular_momentum(sol.y[:, i]) for i in range(sol.y.shape[1])
-    ]
-
     # Estimate Lyapunov exponent
     lyapunov_exponent = estimate_lyapunov_exponent(
         modified_three_body, y0, t_span, num_points, epsilon, sol.y
@@ -201,8 +193,6 @@ def run_simulation(
         log_eps=log_eps,
         log_N=log_num_boxes,
         lyapunov=lyapunov_exponent,
-        energy=energies,
-        angular_momentum=angular_momenta,
     )
 
 

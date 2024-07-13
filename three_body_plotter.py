@@ -125,51 +125,6 @@ def plot_dimensions_and_lyapunov(
     plt.close()
 
 
-def plot_conserved_quantities(
-    data: Dict[str, List[SimulationResult]], output_prefix: str
-) -> None:
-    """
-    Plot conserved quantities (energy and angular momentum) over time for different epsilon values.
-
-    Args:
-        data (Dict[str, List[SimulationResult]]): Dictionary of simulation results.
-        output_prefix (str): Prefix for the output file name.
-    """
-    epsilon_values = sorted(float(eps) for eps in data.keys())
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-
-    for eps in epsilon_values:
-        energies = data[str(eps)][0].energy  # Take first trial
-        angular_momenta = data[str(eps)][0].angular_momentum  # Take first trial
-
-        time = np.linspace(0, len(energies), len(energies))
-
-        ax1.plot(time, energies, label=f"ε = {eps}")
-        ax2.plot(time, angular_momenta, label=f"ε = {eps}")
-
-    ax1.set_xlabel("Time")
-    ax1.set_ylabel("Total Energy")
-    ax1.set_title("Energy Conservation")
-    ax1.legend()
-    ax1.grid(True)
-
-    ax2.set_xlabel("Time")
-    ax2.set_ylabel("Angular Momentum")
-    ax2.set_title("Angular Momentum Conservation")
-    ax2.legend()
-    ax2.grid(True)
-
-    plt.tight_layout()
-    plt.savefig(
-        f"{output_prefix}_conserved_quantities.svg",
-        format="svg",
-        dpi=300,
-        bbox_inches="tight",
-    )
-    plt.close()
-
-
 def plot_dimension_lyapunov_vs_epsilon(
     data: Dict[str, List[SimulationResult]], output_prefix: str
 ) -> None:
@@ -238,7 +193,6 @@ def plot_dimensions_and_metrics(params: PlotterParams) -> None:
     """
     data = load_data(params.input)
     plot_dimensions_and_lyapunov(data, params.output)
-    plot_conserved_quantities(data, params.output)
     plot_dimension_lyapunov_vs_epsilon(data, params.output)
 
     if params.plot_trajectories:
