@@ -20,6 +20,7 @@ from three_body_simulator import (
     main,
     all_offsets,
     are_8_connected,
+    are_8_connected_kd,
 )
 
 
@@ -115,6 +116,31 @@ def test_are_8_connected():
         }
     )
     assert not are_8_connected(
+        {
+            (0, 0, 0, 0, 0, 0),
+            (1, 0, 0, 0, 0, 0),
+            (2, 1, 0, 0, 0, 0),
+            (3, 2, 1, 0, 0, 0),
+            (4, 3, 2, 2, 0, 0),
+        }
+    )
+
+
+def test_are_8_connected_kd():
+    assert are_8_connected_kd({(0, 0), (0, 1)})
+    assert not are_8_connected_kd({(0, 0), (0, 2)})
+    assert are_8_connected_kd({(0, 0), (1, 1)})
+    assert are_8_connected_kd({(0, 0), (1, 1), (0, 2)})
+    assert are_8_connected_kd(
+        {
+            (0, 0, 0, 0, 0, 0),
+            (1, 0, 0, 0, 0, 0),
+            (1, 1, 0, 0, 0, 0),
+            (1, 2, 1, 0, 0, 0),
+            (1, 3, 1, 1, 0, 0),
+        }
+    )
+    assert not are_8_connected_kd(
         {
             (0, 0, 0, 0, 0, 0),
             (1, 0, 0, 0, 0, 0),

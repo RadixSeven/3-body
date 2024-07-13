@@ -261,6 +261,38 @@ def is_connected(tree: KDTree, distance: float) -> bool:
     return len(visited) == n_points
 
 
+def are_8_connected_kd(points: set[tuple]) -> bool:
+    """
+    Return true if the points are 8-connected, that is, every
+    point is within 1 Chebyshev distance of another point.
+
+    Since we calculate the bins using this distance, this should be a good
+    measure of connectedness.
+
+    Args:
+        tree: KDTree of the points.
+        distance: The distance between two points that implies
+           an edge in the graph (i.e., that they are neighbors).
+
+    Returns:
+        True if connected, False otherwise.
+    """
+    # noinspection PyArgumentList
+    tree = KDTree(list(points), metric="chebyshev")
+    n_points = tree.data.shape[0]
+    visited = set()
+    to_visit = {0}  # Start with the first point
+
+    while to_visit:
+        current = to_visit.pop()
+        visited.add(current)
+        current_data = tree.data[current]
+        neighbors = tree.query_radius([current_data], r=1)[0]
+        to_visit.update(set(neighbors) - visited)
+
+    return len(visited) == n_points
+
+
 def covering_squares(points: np.ndarray, side_length: float) -> set[tuple]:
     # Calculate the indices of the squares for each point
     indices = np.floor(points / side_length).astype(int)
