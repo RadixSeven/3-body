@@ -103,13 +103,13 @@ def plot_dimensions_and_lyapunov(
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-    ax1.boxplot(dimensions, labels=epsilon_values)
+    ax1.boxplot(dimensions, tick_labels=epsilon_values)
     ax1.set_xlabel("Epsilon")
     ax1.set_ylabel("Estimated Attractor Dimension")
     ax1.set_title("Attractor Dimension vs. Epsilon")
     ax1.grid(True)
 
-    ax2.boxplot(lyapunovs, labels=epsilon_values)
+    ax2.boxplot(lyapunovs, tick_labels=epsilon_values)
     ax2.set_xlabel("Epsilon")
     ax2.set_ylabel("Lyapunov Exponent")
     ax2.set_title("Lyapunov Exponent vs. Epsilon")
