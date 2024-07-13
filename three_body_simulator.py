@@ -350,14 +350,6 @@ def main(args: SimulationParams) -> None:
             result = run_simulation(epsilon, (0, args.time), args.points)
             measured_dimensions[str(epsilon)].append(asdict(result))
 
-        avg_dim = np.mean([r["dimension"] for r in measured_dimensions[str(epsilon)]])
-        avg_exponent = np.mean(
-            [r["lyapunov"] for r in measured_dimensions[str(epsilon)]]
-        )
-        print(
-            f"Epsilon = {epsilon}: Avg. Dimension = {avg_dim:.3f}, Avg. Lyapunov Exponent = {avg_exponent:.3f}"
-        )
-
     with open(json_file, "w") as f:
         json.dump(dict(measured_dimensions), f)
 
