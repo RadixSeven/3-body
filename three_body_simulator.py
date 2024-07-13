@@ -71,12 +71,14 @@ def box_counting_dim(
     boxes.
 
     Args:
-        points: Array of points around which boxes will be placed.
+        points: Array of points around which boxes will be placed. There must be at least 2.
         n_samples: Number of epsilon values to sample. Defaults to 20.
 
     Returns:
         Estimated dimension, log(1/epsilon) values, log(num_points) values.
     """
+    if points.shape[0] < 2:
+        raise ValueError("Need at least two points to calculate dimension.")
     tree = KDTree(points)
     eps_min, eps_max = estimate_epsilon_range(points)
     epsilons = np.logspace(np.log10(eps_min), np.log10(eps_max), n_samples)
@@ -88,9 +90,9 @@ def box_counting_dim(
         if not is_connected(tree, epsilon):
             continue
 
-        num_points = len(tree.query_radius([[0] * points.shape[1]], r=epsilon)[0])
-        log_eps.append(np.log(epsilon))
-        log_n.append(np.log(num_points))
+        num_squares = count_covering_squares(points, epsilon)
+        log_eps.append(-np.log(epsilon))
+        log_n.append(np.log(num_squares))
 
     # Perform linear fit on the connected portion
     slope, _ = np.polyfit(log_eps, log_n, 1)
@@ -157,6 +159,16 @@ def is_connected(tree: KDTree, distance: float) -> bool:
         to_visit.update(set(neighbors) - visited)
 
     return len(visited) == n_points
+
+
+def count_covering_squares(points: np.ndarray, side_length: float):
+    # Calculate the indices of the squares for each point
+    indices = np.floor(points / side_length).astype(int)
+
+    # Use a set to count unique squares
+    unique_squares = set(map(tuple, indices))
+
+    return len(unique_squares)
 
 
 def random_initial_conditions() -> np.ndarray:
@@ -250,8 +262,14 @@ def main(args: SimulationParams) -> None:
         json.dump(dict(measured_dimensions), f)
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description="Run Three-Body Problem simulations")
+def get_args() -> SimulationParams:
+    parser = argparse.ArgumentParser(
+        description="Run Modified Three-Body Problem simulations."
+        "Note: The output file will be overwritten if it already exists."
+        "And I'm not confident in the mechanism for estimating the "
+        "Lyapunov exponent, estimates something that increases with chaos, "
+        "but I'm not sure it is the exponent."
+    )
     parser.add_argument(
         "--epsilon",
         type=float,
@@ -277,8 +295,9 @@ def get_args():
         default="measured_dimensions.json",
         help="Output JSON file name",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    return SimulationParams(**vars(args))
 
 
 if __name__ == "__main__":
-    main(SimulationParams(**vars(get_args())))
+    main(get_args())

@@ -82,12 +82,12 @@ def test_random_initial_conditions():
 
 
 def test_run_simulation():
-    epsilon = 0.5
-    t_span = (0, 10)
-    num_points = 1000
-    dim, log_eps, log_num_points = run_simulation(epsilon, t_span, num_points)
-    assert isinstance(dim, float)
-    assert len(log_eps) == len(log_num_points)
+    result = run_simulation(epsilon=1, t_span=(0, 10), num_points=1000)
+    assert len(result.log_eps) == len(result.log_N)
+    assert result.dimension > 0
+    assert result.lyapunov > 0  # epsilon=1 should be chaotic
+    result = run_simulation(epsilon=0, t_span=(0, 10), num_points=1000)
+    assert result.dimension > 0
 
 
 def test_main_function(tmp_path):
