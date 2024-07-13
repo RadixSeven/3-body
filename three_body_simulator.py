@@ -88,9 +88,10 @@ def box_counting_dim(
     """
     shape = points.shape
     if shape[0] < 2**2 + 1:
-        raise ValueError(
-            "Need at least 5 points to calculate dimension in a 2-D space."
+        logging.error(
+            f"Need at least 5 points to calculate dimension in a 2-D space. Got: {shape} with contents {points}"
         )
+        return np.nan, [], []
     eps_min, eps_max = estimate_epsilon_range(points)
     eps_min = eps_min / np.sqrt(
         2
