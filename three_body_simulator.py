@@ -6,7 +6,6 @@ from pathlib import Path
 import argparse
 from collections import defaultdict
 from dataclasses import asdict
-from typing import List, Tuple
 
 from three_body_common import (
     SimulationResult,
@@ -20,7 +19,7 @@ from three_body_common import (
 def estimate_lyapunov_exponent(
     func: callable,
     y0: np.ndarray,
-    t_span: Tuple[float, float],
+    t_span: tuple[float, float],
     num_points: int,
     epsilon: float,
     delta: float = 1e-9,
@@ -31,7 +30,7 @@ def estimate_lyapunov_exponent(
     Args:
         func (callable): The function defining the ODE system.
         y0 (np.ndarray): Initial condition.
-        t_span (Tuple[float, float]): Time span for the simulation.
+        t_span (tuple[float, float]): Time span for the simulation.
         num_points (int): Number of points to evaluate.
         epsilon (float): Coupling strength for the y-dimension.
         delta (float): Small perturbation for initial condition. Defaults to 1e-9.
@@ -71,52 +70,54 @@ def estimate_lyapunov_exponent(
 
 
 def box_counting_dim(
-    X: np.ndarray, n_samples: int = 20
-) -> Tuple[float, List[float], List[float]]:
+    points: np.ndarray, n_samples: int = 20
+) -> tuple[float, list[float], list[float]]:
     """
     Estimate the box-counting dimension of a set of points.
 
     Args:
-        X (np.ndarray): Array of points.
-        n_samples (int): Number of epsilon values to sample. Defaults to 20.
+        points: Array of points around which boxes will be placed.
+        n_samples: Number of epsilon values to sample. Defaults to 20.
 
     Returns:
-        Tuple[float, List[float], List[float]]: Estimated dimension, log(1/epsilon) values, log(N) values.
+        Estimated dimension, log(1/epsilon) values, log(num_points) values.
     """
-    tree = KDTree(X)
-    eps_min, eps_max = estimate_epsilon_range(X)
+    tree = KDTree(points)
+    eps_min, eps_max = estimate_epsilon_range(points)
     epsilons = np.logspace(np.log10(eps_min), np.log10(eps_max), n_samples)
 
     log_eps = []
-    log_N = []
+    log_n = []
 
     for epsilon in epsilons:
         if not check_connectedness(tree, epsilon):
             break
 
-        N = len(tree.query_radius([[0] * X.shape[1]], r=epsilon)[0])
+        num_points = len(tree.query_radius([[0] * points.shape[1]], r=epsilon)[0])
         log_eps.append(np.log(1 / epsilon))
-        log_N.append(np.log(N))
+        log_n.append(np.log(num_points))
 
     # Perform linear fit on the connected portion
-    slope, _ = np.polyfit(log_eps, log_N, 1)
+    slope, _ = np.polyfit(log_eps, log_n, 1)
 
-    return slope, log_eps, log_N
+    return slope, log_eps, log_n
 
 
-def estimate_epsilon_range(X: np.ndarray) -> Tuple[float, float]:
+def estimate_epsilon_range(points: np.ndarray) -> tuple[float, float]:
     """
     Estimate a suitable range for epsilon values based on the data.
 
     Args:
-        X (np.ndarray): Array of points.
+        points: Array of points.
 
     Returns:
-        Tuple[float, float]: Minimum and maximum epsilon values.
+        tuple[float, float]: Minimum and maximum epsilon values.
     """
-    distances = KDTree(X).query(X, k=2)[0][:, 1]  # Distances to nearest neighbors
+    distances = KDTree(points).query(points, k=2)[0][
+        :, 1
+    ]  # Distances to nearest neighbors
     min_distance = np.min(distances)
-    max_distance = np.max(np.ptp(X, axis=0))  # Maximum extent of data
+    max_distance = np.max(np.ptp(points, axis=0))  # Maximum extent of data
     return min_distance / 2, max_distance
 
 
@@ -159,14 +160,14 @@ def random_initial_conditions() -> np.ndarray:
 
 
 def run_simulation(
-    epsilon: float, t_span: Tuple[float, float], num_points: int
+    epsilon: float, t_span: tuple[float, float], num_points: int
 ) -> SimulationResult:
     """
     Run a single simulation of the modified three-body problem and calculate various metrics.
 
     Args:
         epsilon (float): Coupling strength for the y-dimension.
-        t_span (Tuple[float, float]): Time span for the simulation.
+        t_span (tuple[float, float]): Time span for the simulation.
         num_points (int): Number of points to evaluate in the simulation.
 
     Returns:
@@ -240,7 +241,8 @@ def main(args: SimulationParams) -> None:
         json.dump(dict(measured_dimensions), f)
 
 
-if __name__ == "__main__":
+def get_args():
+    global args
     parser = argparse.ArgumentParser(description="Run Three-Body Problem simulations")
     parser.add_argument(
         "--epsilon",
@@ -267,5 +269,9 @@ if __name__ == "__main__":
         default="measured_dimensions.json",
         help="Output JSON file name",
     )
-    args = parser.parse_args()
-    main(SimulationParams(**vars(args)))
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    get_args()
+    main(SimulationParams(**vars(get_args())))
