@@ -5,3 +5,4 @@ matplotlib
 pre-commit
 black
 pytest
+tqdm

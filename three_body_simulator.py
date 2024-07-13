@@ -8,6 +8,7 @@ from pathlib import Path
 import argparse
 from collections import defaultdict
 from dataclasses import asdict, dataclass
+from tqdm import tqdm
 
 from three_body_common import (
     SimulationResult,
@@ -377,8 +378,8 @@ def main(args: SimulationParams) -> None:
     except FileNotFoundError:
         measured_dimensions = defaultdict(list)
 
-    for epsilon in args.epsilon:
-        for _ in range(args.trials):
+    for epsilon in tqdm(args.epsilon, "Epsilon"):
+        for _ in tqdm(range(args.trials), "Trials"):
             result = run_simulation(epsilon, (0, args.time), args.points)
             measured_dimensions[str(epsilon)].append(asdict(result))
 
