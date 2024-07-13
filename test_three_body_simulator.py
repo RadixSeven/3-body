@@ -19,6 +19,7 @@ from three_body_simulator import (
     run_simulation,
     main,
     all_offsets,
+    are_8_connected,
 )
 
 
@@ -97,6 +98,31 @@ def test_random_initial_conditions():
     assert len(init_cond) == 12
     reshaped = init_cond.reshape(3, 4)
     assert np.allclose(np.mean(reshaped[:, :2]), 0, atol=1e-10)
+
+
+def test_are_8_connected():
+    assert are_8_connected({(0, 0), (0, 1)})
+    assert not are_8_connected({(0, 0), (0, 2)})
+    assert are_8_connected({(0, 0), (1, 1)})
+    assert are_8_connected({(0, 0), (1, 1), (0, 2)})
+    assert are_8_connected(
+        {
+            (0, 0, 0, 0, 0, 0),
+            (1, 0, 0, 0, 0, 0),
+            (1, 1, 0, 0, 0, 0),
+            (1, 2, 1, 0, 0, 0),
+            (1, 3, 1, 1, 0, 0),
+        }
+    )
+    assert not are_8_connected(
+        {
+            (0, 0, 0, 0, 0, 0),
+            (1, 0, 0, 0, 0, 0),
+            (2, 1, 0, 0, 0, 0),
+            (3, 2, 1, 0, 0, 0),
+            (4, 3, 2, 2, 0, 0),
+        }
+    )
 
 
 def test_run_simulation():
